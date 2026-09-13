@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>SimuBoSS - Crée ton empire</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+  body {
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: #eee; min-height: 100vh; padding: 20px;
+  }
+  .container { max-width: 1100px; margin: auto; }
+  h1 { text-align: center; font-size: 2.5em; margin-bottom: 10px;
+       background: linear-gradient(90deg, #ff9966, #ff5e62);
+       -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { text-align: center; color: #aaa; margin-bottom: 30px; }
+  .card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 15px; padding: 25px; margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+  }
+  label { display: block; margin: 15px 0 5px; color: #ff9966; font-weight: bold; }
+  input, select {
+    width: 100%; padding: 12px; border-radius: 8px; border: none;
+    background: rgba(0,0,0,0.3); color: #fff; font-size: 1em;
+  }
+  input:focus, select:focus { outline: 2px solid #ff9966; }
+  button {
+    background: linear-gradient(90deg, #ff9966, #ff5e62); color: #fff;
+    border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer;
+    font-size: 1em; font-weight: bold; margin: 5px; transition: transform 0.2s;
+  }
+  button:hover:not(:disabled) { transform: scale(1.05); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: linear-gradient(90deg, #4b6cb7, #182848); }
+  .btn-success { background: linear-gradient(90deg, #11998e, #38ef7d); }
+  .btn-danger { background: linear-gradient(90deg, #cb2d3e, #ef473a); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+  .stat {
+    background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; text-align: center;
+    border-left: 4px solid #ff9966;
+  }
+  .stat .value { font-size: 1.8em; font-weight: bold; color: #fff; }
+  .stat .label { color: #aaa; font-size: 0.85em; }
+  .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .action-btn {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; padding: 15px; border-radius: 10px; cursor: pointer;
+    text-align: left; transition: all 0.2s;
+  }
+  .action-btn:hover:not(:disabled) { background: rgba(255,153,102,0.2); border-color: #ff9966; }
+  .action-btn .title { font-weight: bold; color: #ff9966; margin-bottom: 5px; }
+  .action-btn .desc { font-size: 0.85em; color: #bbb; }
+  .action-btn .cost { font-size: 0.8em; color: #ff5e62; margin-top: 5px; }
+  #log {
+    max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.4);
+    padding: 15px; border-radius: 10px; font-size: 0.9em;
+  }
+  .log-entry { padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .log-event { color: #ffcc66; }
+  .log-good { color: #38ef7d; }
+  .log-bad { color: #ef473a; }
+  .log-info { color: #88ccff; }
+  .game-over {
+    text-align: center; padding: 40px;
+    background: rgba(239,71,58,0.2); border: 2px solid #ef473a;
+  }
+  .hidden { display: none; }
+  .progress-bar {
+    background: rgba(0,0,0,0.3); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px;
+  }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #11998e, #38ef7d); transition: width 0.5s; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🏢 SimuBoSS</h1>
+  <p class="subtitle">Crée ton empire, gère ta boîte, deviens riche (ou pas)</p>
+
+  <!-- ÉCRAN CRÉATION -->
+  <div id="setup" class="card">
+    <h2 style="color:#ff9966;">📋 Crée ton entreprise</h2>
+    <label>Nom de l'entreprise</label>
+    <input type="text" id="companyName" placeholder="Ex: MegaCorp, Chez Mamie, FastChicken..." maxlength="30">
+    <label>Domaine d'activité</label>
+    <select id="domain">
+      <option value="informatique">💻 Informatique / Tech</option>
+      <option value="automobile">🚗 Automobile / Mécanique</option>
+      <option value="restaurant">🍽️ Restaurant / Food</option>
+      <option value="poulet">🐔 Élevage de poulets</option>
+      <option value="boulangerie">🥖 Boulangerie</option>
+      <option value="mode">👗 Mode / Vêtements</option>
+      <option value="construction">🏗️ Construction / BTP</option>
+      <option value="agriculture">🌾 Agriculture</option>
+      <option value="transport">🚚 Transport / Logistique</option>
+      <option value="jeuxvideo">🎮 Jeux vidéo</option>
+    </select>
+    <label>Budget de départ : <span id="budgetDisplay">50 000</span> €</label>
+    <input type="range" id="budget" min="5000" max="500000" step="5000" value="50000">
+    <p style="color:#888; font-size:0.85em; margin-top:5px;">💡 Plus de budget = plus de pression pour rentabiliser</p>
+    <br>
+    <button onclick="startGame()" style="width:100%; font-size:1.2em; padding:15px;">🚀 LANCER L'AVENTURE</button>
+  </div>
+
+  <!-- ÉCRAN DE JEU -->
+  <div id="game" class="hidden">
+    <div class="card">
+      <h2 id="gameTitle" style="color:#ff9966;"></h2>
+      <p id="gameSubtitle" style="color:#aaa;"></p>
+      <div style="margin-top:15px;">
+        <span>Semaine : <strong id="weekNum">1</strong></span> |
+        <span>Année : <strong id="yearNum">1</strong></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="color:#ff9966; margin-bottom:15px;">📊 Tableau de bord</h3>
+      <div class="stats">
+        <div class="stat"><div class="value" id="money">0€</div><div class="label">💰 Trésorerie</div></div>
+        <div class="stat"><div class="value" id="reputation">0</div><div class="label">⭐ Réputation</div></div>
+        <div class="stat"><div class="value" id="employees">0</div><div class="label">👥 Employés</div></div>
+        <div class="stat"><div class="value" id="clients">0</div><div class="label">🧑‍🤝‍🧑 Clients/semaine</div></div>
+        <div class="stat"><div class="value" id="revenue">0€</div><div class="label">📈 Revenu/semaine</div></div>
+        <div class="stat"><div class="value" id="quality">50</div><div class="label">🎯 Qualité</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="color:#ff9966; margin-bottom:15px;">⚡ Actions</h3>
+      <div class="actions" id="actionsList"></div>
+      <button onclick="nextWeek()" class="btn-success" style="width:100%; margin-top:15px; font-size:1.1em;">
+        ⏭️ Passer à la semaine suivante
+      </button>
+    </div>
+
+    <div class="card">
+      <h3 style="color:#ff9966; margin-bottom:15px;">📜 Journal de bord</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ DONNÉES DU JEU ============
+const DOMAINS = {
+  informatique: {
+    icon: "💻", baseRevenue: 80, baseClients: 5,
+    actions: [
+      { id: "dev", title: "Développer un produit", desc: "Améliore la qualité", cost: 2000, effect: s => { s.quality += 5; s.reputation += 2; } },
+      { id: "marketing", title: "Campagne pub", desc: "+15 clients/semaine", cost: 1500, effect: s => { s.clients += 15; } },
+      { id: "hire", title: "Embaucher un dev", desc: "+1 employé, +revenu", cost: 3000, effect: s => { s.employees++; s.baseRevenue += 40; } },
+      { id: "server", title: "Acheter serveurs", desc: "Supporte plus de clients", cost: 5000, effect: s => { s.capacity += 50; s.quality += 3; } },
+      { id: "formation", title: "Formation équipe", desc: "+10 qualité", cost: 1000, effect: s => { s.quality += 10; } }
+    ],
+    events: [
+      { text: "🐛 Un bug critique est découvert !", effect: s => { s.reputation -= 10; s.quality -= 10; }, type: "bad" },
+      { text: "🎉 Un influenceur parle de toi !", effect: s => { s.clients += 30; s.reputation += 15; }, type: "good" },
+      { text: "💼 Un gros client te contacte pour un contrat !", effect: s => { s.money += 10000; s.reputation += 5; }, type: "good" },
+      { text: "🔓 Tu te fais pirater !", effect: s => { s.money -= 5000; s.reputation -= 15; }, type: "bad" },
+      { text: "📱 Une nouvelle techno sort, tu dois t'adapter", effect: s => { s.quality -= 5; }, type: "event" }
+    ]
+  },
+  automobile: {
+    icon: "🚗", baseRevenue: 150, baseClients: 3,
+    actions: [
+      { id: "stock", title: "Acheter des pièces", desc: "Augmente le stock", cost: 3000, effect: s => { s.capacity += 20; } },
+      { id: "marketing", title: "Pub locale", desc: "+10 clients", cost: 1000, effect: s => { s.clients += 10; } },
+      { id: "hire", title: "Embaucher mécanicien", desc: "+1 employé", cost: 2500, effect: s => { s.employees++; s.baseRevenue += 60; } },
+      { id: "outils", title: "Nouveaux outils", desc: "+8 qualité", cost: 4000, effect: s => { s.quality += 8; } },
+      { id: "garage", title: "Agrandir le garage", desc: "+30 capacité", cost: 15000, effect: s => { s.capacity += 30; } }
+    ],
+    events: [
+      { text: "🔧 Un client furieux casse tout sur internet !", effect: s => { s.reputation -= 12; }, type: "bad" },
+      { text: "🏆 Tu gagnes un prix local !", effect: s => { s.reputation += 20; s.clients += 15; }, type: "good" },
+      { text: "⚠️ Panne de matériel, réparation coûteuse", effect: s => { s.money -= 3000; }, type: "bad" },
+      { text: "📺 Passage au journal régional !", effect: s => { s.clients += 25; }, type: "good" },
+      { text: "🚨 Contrôle technique surprise, tout va bien", effect: s => { s.reputation += 5; }, type: "good" }
+    ]
+  },
+  restaurant: {
+    icon: "🍽️", baseRevenue: 60, baseClients: 20,
+    actions: [
+      { id: "menu", title: "Nouveau menu", desc: "+10 qualité", cost: 1500, effect: s => { s.quality += 10; } },
+      { id: "marketing", title: "Flyers + réseaux", desc: "+20 clients", cost: 800, effect: s => { s.clients += 20; } },
+      { id: "hire", title: "Embaucher serveur/cuisinier", desc: "+1 employé", cost: 2000, effect: s => { s.employees++; s.capacity += 15; } },
+      { id: "deco", title: "Rénover la salle", desc: "+15 qualité, +réputation", cost: 8000, effect: s => { s.quality += 15; s.reputation += 10; } },
+      { id: "livraison", title: "Lancer la livraison", desc: "+25 clients", cost: 3000, effect: s => { s.clients += 25; } }
+    ],
+    events: [
+      { text: "🍕 Un food blogger vient tester !", effect: s => { s.reputation += 15; s.clients += 10; }, type: "good" },
+      { text: "🤢 Intoxication alimentaire signalée !", effect: s => { s.reputation -= 25; s.clients -= 10; s.money -= 2000; }, type: "bad" },
+      { text: "👨‍🍳 Ton chef part chez le concurrent", effect: s => { s.quality -= 10; }, type: "bad" },
+      { text: "🎂 Anniversaire célèbre chez toi !", effect: s => { s.money += 2000; s.reputation += 5; }, type: "good" },
+      { text: "🔥 Petit incendie en cuisine !", effect: s => { s.money -= 4000; s.reputation -= 5; }, type: "bad" }
+    ]
+  },
+  poulet: {
+    icon: "🐔", baseRevenue: 40, baseClients: 10,
+    actions: [
+      { id: "poulets", title: "Acheter des poussins", desc: "+30 capacité", cost: 1000, effect: s => { s.capacity += 30; } },
+      { id: "marketing", title: "Pub marché local", desc: "+15 clients", cost: 500, effect: s => { s.clients += 15; } },
+      { id: "hire", title: "Embaucher fermier", desc: "+1 employé", cost: 1500, effect: s => { s.employees++; s.baseRevenue += 20; } },
+      { id: "batiment", title: "Construire un poulailler", desc: "+50 capacité", cost: 10000, effect: s => { s.capacity += 50; } },
+      { id: "bio", title: "Passer en bio", desc: "+20 qualité, +réputation", cost: 5000, effect: s => { s.quality += 20; s.reputation += 15; } }
+    ],
+    events: [
+      { text: "🦠 Grippe aviaire détectée !", effect: s => { s.capacity -= 20; s.money -= 3000; }, type: "bad" },
+      { text: "🥚 Production record cette semaine !", effect: s => { s.money += 3000; s.reputation += 5; }, type: "good" },
+      { text: "🦊 Un renard s'est infiltré !", effect: s => { s.capacity -= 10; }, type: "bad" },
+      { text: "🏆 Prix du meilleur éleveur !", effect: s => { s.reputation += 20; s.clients += 15; }, type: "good" },
+      { text: "🌧️ Mauvaise récolte, aliment cher", effect: s => { s.money -= 1500; }, type: "bad" }
+    ]
+  },
+  boulangerie: {
+    icon: "🥖", baseRevenue: 50, baseClients: 25,
+    actions: [
+      { id: "farine", title: "Stock de farine", desc: "+20 capacité", cost: 800, effect: s => { s.capacity += 20; } },
+      { id: "marketing", title: "Enseigne lumineuse", desc: "+15 clients", cost: 1200, effect: s => { s.clients += 15; } },
+      { id: "hire", title: "Embaucher boulanger", desc: "+1 employé", cost: 2000, effect: s => { s.employees++; s.baseRevenue += 25; } },
+      { id: "four", title: "Nouveau four", desc: "+10 qualité", cost: 6000, effect: s => { s.quality += 10; s.capacity += 15; } },
+      { id: "specialite", title: "Créer une spécialité", desc: "+réputation", cost: 2000, effect: s => { s.reputation += 15; s.clients += 10; } }
+    ],
+    events: [
+      { text: "🥐 Ta viennoiserie devient virale !", effect: s => { s.clients += 30; s.reputation += 10; }, type: "good" },
+      { text: "🔥 Le four tombe en panne !", effect: s => { s.money -= 2500; s.quality -= 5; }, type: "bad" },
+      { text: "🎂 Commande énorme pour un mariage", effect: s => { s.money += 4000; }, type: "good" },
+      { text: "🐀 Souris détectée ! Fermeture temporaire", effect: s => { s.reputation -= 20; s.money -= 1500; }, type: "bad" },
+      { text: "📰 Article élogieux dans le journal", effect: s => { s.reputation += 15; s.clients += 10; }, type: "good" }
+    ]
+  },
+  mode: {
+    icon: "👗", baseRevenue: 100, baseClients: 8,
+    actions: [
+      { id: "collection", title: "Nouvelle collection", desc: "+15 qualité", cost: 5000, effect: s => { s.quality += 15; } },
+      { id: "marketing", title: "Défilé / Instagram", desc: "+20 clients", cost: 3000, effect: s => { s.clients += 20; } },
+      { id: "hire", title: "Embaucher styliste", desc: "+1 employé", cost: 3500, effect: s => { s.employees++; s.baseRevenue += 50; } },
+      { id: "boutique", title: "Ouvrir une boutique", desc: "+30 clients", cost: 20000, effect: s => { s.clients += 30; s.capacity += 30; } },
+      { id: "collab", title: "Collab avec influenceur", desc: "+réputation", cost: 4000, effect: s => { s.reputation += 20; s.clients += 15; } }
+    ],
+    events: [
+      { text: "🌟 Une célébrité porte ta marque !", effect: s => { s.reputation += 25; s.clients += 25; }, type: "good" },
+      { text: "📉 La collection ne plaît pas", effect: s => { s.reputation -= 10; s.money -= 2000; }, type: "bad" },
+      { text: "🏆 Prix de la mode décerné !", effect: s => { s.reputation += 20; s.money += 5000; }, type: "good" },
+      { text: "📦 Retards de livraison tissu", effect: s => { s.quality -= 5; s.money -= 1500; }, type: "bad" },
+      { text: "🎬 On te propose un placement produit", effect: s => { s.money += 3000; s.reputation += 5; }, type: "good" }
+    ]
+  },
+  construction: {
+    icon: "🏗️", baseRevenue: 200, baseClients: 2,
+    actions: [
+      { id: "materiaux", title: "Acheter matériaux", desc: "+20 capacité", cost: 5000, effect: s => { s.capacity += 20; } },
+      { id: "marketing", title: "Site web + pub", desc: "+3 clients", cost: 2000, effect: s => { s.clients += 3; } },
+      { id: "hire", title: "Embaucher ouvrier", desc: "+1 employé", cost: 3000, effect: s => { s.employees++; s.baseRevenue += 80; } },
+      { id: "camion", title: "Acheter camion", desc: "+10 capacité", cost: 15000, effect: s => { s.capacity += 10; } },
+      { id: "certif", title: "Certification qualité", desc: "+15 qualité, +réputation", cost: 8000, effect: s => { s.quality += 15; s.reputation += 15; } }
+    ],
+    events: [
+      { text: "🏠 Gros chantier signé !", effect: s => { s.money += 15000; s.reputation += 10; }, type: "good" },
+      { text: "⚠️ Accident sur chantier", effect: s => { s.money -= 8000; s.reputation -= 15; }, type: "bad" },
+      { text: "🌧️ Intempéries, retard", effect: s => { s.money -= 2000; s.reputation -= 5; }, type: "bad" },
+      { text: "🏆 Appel d'offres gagné", effect: s => { s.money += 20000; s.clients += 2; }, type: "good" },
+      { text: "📋 Contrôle URSSAF", effect: s => { s.money -= 3000; }, type: "event" }
+    ]
+  },
+  agriculture: {
+    icon: "🌾", baseRevenue: 70, baseClients: 6,
+    actions: [
+      { id: "semences", title: "Semences + engrais", desc: "+25 capacité", cost: 2000, effect: s => { s.capacity += 25; } },
+      { id: "marketing", title: "Marché local", desc: "+10 clients", cost: 600, effect: s => { s.clients += 10; } },
+      { id: "hire", title: "Embaucher ouvrier agricole", desc: "+1 employé", cost: 1800, effect: s => { s.employees++; s.baseRevenue += 30; } },
+      { id: "tracteur", title: "Nouveau tracteur", desc: "+20 capacité", cost: 25000, effect: s => { s.capacity += 20; s.quality += 5; } },
+      { id: "bio", title: "Label bio", desc: "+20 qualité, +réputation", cost: 6000, effect: s => { s.quality += 20; s.reputation += 20; } }
+    ],
+    events: [
+      { text: "☀️ Récolte exceptionnelle !", effect: s => { s.money += 5000; s.reputation += 5; }, type: "good" },
+      { text: "🌪️ Tempête détruit une partie des cultures", effect: s => { s.capacity -= 15; s.money -= 3000; }, type: "bad" },
+      { text: "🐛 Invasion de parasites", effect: s => { s.quality -= 10; s.money -= 2000; }, type: "bad" },
+      { text: "🏆 Concours agricole gagné !", effect: s => { s.reputation += 20; s.clients += 10; }, type: "good" },
+      { text: "🚜 Subvention européenne reçue", effect: s => { s.money += 4000; }, type: "good" }
+    ]
+  },
+  transport: {
+    icon: "🚚", baseRevenue: 120, baseClients: 4,
+    actions: [
+      { id: "camion", title: "Acheter camion", desc: "+15 capacité", cost: 20000, effect: s => { s.capacity += 15; } },
+      { id: "marketing", title: "Prospection entreprises", desc: "+5 clients", cost: 1500, effect: s => { s.clients += 5; } },
+      { id: "hire", title: "Embaucher chauffeur", desc: "+1 employé", cost: 2500, effect: s => { s.employees++; s.baseRevenue += 50; } },
+      { id: "entrepot", title: "Louer entrepôt", desc: "+30 capacité", cost: 8000, effect: s => { s.capacity += 30; } },
+      { id: "gps", title: "Système de tracking", desc: "+10 qualité", cost: 3000, effect: s => { s.quality += 10; s.reputation += 5; } }
+    ],
+    events: [
+      { text: "📦 Gros contrat Amazon signé !", effect: s => { s.money += 12000; s.clients += 5; }, type: "good" },
+      { text: "💥 Accident avec un camion", effect: s => { s.money -= 7000; s.reputation -= 10; }, type: "bad" },
+      { text: "⛽ Hausse du prix du carburant", effect: s => { s.money -= 3000; }, type: "bad" },
+      { text: "🏆 Élu transporteur de l'année", effect: s => { s.reputation += 20; s.clients += 8; }, type: "good" },
+      { text: "🚧 Grève bloque les routes", effect: s => { s.money -= 2000; s.reputation -= 5; }, type: "bad" }
+    ]
+  },
+  jeuxvideo: {
+    icon: "🎮", baseRevenue: 90, baseClients: 10,
+    actions: [
+      { id: "dev", title: "Développer un jeu", desc: "+15 qualité", cost: 5000, effect: s => { s.quality += 15; } },
+      { id: "marketing", title: " Trailer + réseaux", desc: "+25 clients", cost: 2500, effect: s => { s.clients += 25; } },
+      { id: "hire", title: "Embaucher dev", desc: "+1 employé", cost: 4000, effect: s => { s.employees++; s.baseRevenue += 40; } },
+      { id: "serveur", title: "Serveurs multijoueur", desc: "+30 capacité", cost: 8000, effect: s => { s.capacity += 30; } },
+      { id: "dlc", title: "Sortir un DLC", desc: "+réputation, +clients", cost: 3000, effect: s => { s.reputation += 10; s.clients += 15; } }
+    ],
+    events: [
+      { text: "🎮 Ton jeu devient viral sur Twitch !", effect: s => { s.clients += 50; s.reputation += 20; }, type: "good" },
+      { text: "💀 Review-bombing sur Steam", effect: s => { s.reputation -= 20; s.clients -= 15; }, type: "bad" },
+      { text: "🏆 Nommé aux Game Awards !", effect: s => { s.reputation += 25; s.money += 5000; }, type: "good" },
+      { text: "🐛 Bug critique à la sortie", effect: s => { s.reputation -= 15; s.money -= 3000; }, type: "bad" },
+      { text: "🤝 Partenariat avec un gros éditeur", effect: s => { s.money += 15000; s.reputation += 10; }, type: "good" }
+    ]
+  }
+};
+
+// ============ ÉTAT DU JEU ============
+let state = null;
+
+// ============ FONCTIONS ============
+function startGame() {
+  const name = document.getElementById('companyName').value.trim() || "Mon Entreprise";
+  const domain = document.getElementById('domain').value;
+  const budget = parseInt(document.getElementById('budget').value);
+  const d = DOMAINS[domain];
+
+  state = {
+    name, domain, money: budget, reputation: 30, employees: 1,
+    clients: d.baseClients, baseRevenue: d.baseRevenue, quality: 50,
+    capacity: 50, week: 1, year: 1, salaryCost: 500,
+    actionsUsed: []
+  };
+
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  document.getElementById('gameTitle').textContent = `${d.icon} ${name}`;
+  document.getElementById('gameSubtitle').textContent = `Spécialisé en ${domain}`;
+
+  log(`🎉 Bienvenue ${name} ! Tu commences avec ${budget.toLocaleString()}€ en poche.`, 'info');
+  log(`💡 Conseil : équilibre investissements et revenus. Bonne chance !`, 'info');
+
+  updateUI();
+}
+
+function updateUI() {
+  const revenue = calcRevenue();
+  document.getElementById('weekNum').textContent = state.week;
+  document.getElementById('yearNum').textContent = state.year;
+  document.getElementById('money').textContent = Math.round(state.money).toLocaleString() + '€';
+  document.getElementById('reputation').textContent = Math.round(state.reputation);
+  document.getElementById('employees').textContent = state.employees;
+  document.getElementById('clients').textContent = Math.round(state.clients);
+  document.getElementById('revenue').textContent = Math.round(revenue).toLocaleString() + '€';
+  document.getElementById('quality').textContent = Math.round(state.quality);
+
+  renderActions();
+}
+
+function calcRevenue() {
+  const served = Math.min(state.clients, state.capacity);
+  const qualityMult = 0.5 + (state.quality / 100);
+  return served * state.baseRevenue * qualityMult;
+}
+
+function renderActions() {
+  const d = DOMAINS[state.domain];
+  const container = document.getElementById('actionsList');
+  container.innerHTML = '';
+  d.actions.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'action-btn';
+    btn.disabled = state.money < a.cost;
+    btn.innerHTML = `
+      <div class="title">${a.title}</div>
+      <div class="desc">${a.desc}</div>
+      <div class="cost">💸 ${a.cost.toLocaleString()}€</div>
+    `;
+    btn.onclick = () => doAction(a);
+    container.appendChild(btn);
+  });
+}
+
+function doAction(a) {
+  if (state.money < a.cost) return;
+  state.money -= a.cost;
+  a.effect(state);
+  clamp();
+  log(`✅ ${a.title} (-${a.cost.toLocaleString()}€)`, 'good');
+  updateUI();
+}
+
+function nextWeek() {
+  const revenue = calcRevenue();
+  const costs = state.employees * state.salaryCost + 200; // salaires + frais fixes
+  const profit = revenue - costs;
+  state.money += profit;
+  state.week++;
+  if (state.week > 52) { state.week = 1; state.year++; }
+
+  log(`📅 Semaine ${state.week} — Revenus: ${Math.round(revenue).toLocaleString()}€ | Charges: ${costs.toLocaleString()}€ | ${profit >= 0 ? '+' : ''}${Math.round(profit).toLocaleString()}€`, profit >= 0 ? 'good' : 'bad');
+
+  // Événement aléatoire (30% de chance)
+  if (Math.random() < 0.3) {
+    const events = DOMAINS[state.domain].events;
+    const ev = events[Math.floor(Math.random() * events.length)];
+    ev.effect(state);
+    clamp();
+    log(ev.text, ev.type === 'good' ? 'good' : ev.type === 'bad' ? 'bad' : 'event');
+  }
+
+  // Évolution naturelle
+  if (state.reputation > 70 && Math.random() < 0.4) state.clients += Math.floor(state.reputation / 20);
+  if (state.quality < 40) state.clients = Math.max(0, state.clients - 2);
+
+  clamp();
+  updateUI();
+  checkGameOver();
+}
+
+function clamp() {
+  state.reputation = Math.max(0, Math.min(100, state.reputation));
+  state.quality = Math.max(0, Math.min(100, state.quality));
+  state.clients = Math.max(0, state.clients);
+  state.capacity = Math.max(10, state.capacity);
+}
+
+function checkGameOver() {
+  if (state.money < -10000) {
+    document.getElementById('game').innerHTML = `
+      <div class="card game-over">
+        <h2 style="color:#ef473a;">💀 GAME OVER</h2>
+        <p style="margin:20px 0;">${state.name} a fait faillite...</p>
+        <p>Tu as tenu <strong>${state.year}</strong> an(s) et <strong>${state.week}</strong> semaine(s).</p>
+        <p>Réputation finale : ${Math.round(state.reputation)}⭐</p>
+        <button onclick="location.reload()" style="margin-top:20px;">🔄 Recommencer</button>
+      </div>
+    `;
+  }
+  if (state.money > 1000000) {
+    document.getElementById('game').innerHTML = `
+      <div class="card" style="text-align:center; background:rgba(56,239,125,0.2); border:2px solid #38ef7d;">
+        <h2 style="color:#38ef7d;">🏆 VICTOIRE !</h2>
+        <p style="margin:20px 0; font-size:1.2em;">${state.name} est un empire à 1 million d'euros !</p>
+        <p>Temps : <strong>${state.year}</strong> an(s) et <strong>${state.week}</strong> semaine(s)</p>
+        <p>Employés : ${state.employees} | Clients : ${Math.round(state.clients)} | Réputation : ${Math.round(state.reputation)}⭐</p>
+        <button onclick="location.reload()" style="margin-top:20px;" class="btn-success">🔄 Nouvelle partie</button>
+      </div>
+    `;
+  }
+}
+
+function log(msg, type = 'info') {
+  const logEl = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry log-' + type;
+  entry.textContent = `[S${state.week}] ${msg}`;
+  logEl.insertBefore(entry, logEl.firstChild);
+}
+
+// Slider budget
+document.getElementById('budget').addEventListener('input', e => {
+  document.getElementById('budgetDisplay').textContent = parseInt(e.target.value).toLocaleString();
+});
+</script>
+</body>
+</html>
